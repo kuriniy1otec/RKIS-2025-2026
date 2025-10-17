@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Todolist
 {
@@ -52,13 +54,13 @@ namespace Todolist
                 {
                     ShowProfile();
                 }
-                else if (input.StartsWith("add "))
+                else if (input.StartsWith("add"))
                 {
                     AddTask(input);
                 }
-                else if (input == "view")
+                else if (input.StartsWith("view"))
                 {
-                    ViewTasks();
+                    ViewTasks(input);
                 }
                 else if (input.StartsWith("done "))
                 {
@@ -71,6 +73,10 @@ namespace Todolist
                 else if (input.StartsWith("update "))
                 {
                     UpdateTask(input);
+                }
+                else if (input.StartsWith("read "))
+                {
+                    ReadTask(input);
                 }
                 else if (input == "exit")
                 {
@@ -91,11 +97,14 @@ namespace Todolist
             Console.WriteLine("Доступные команды:");
             Console.WriteLine("help - вывести список команд");
             Console.WriteLine("profile - показать данные пользователя");
-            Console.WriteLine("add \"текст задачи\" - добавить задачу");
-            Console.WriteLine("view - показать все задачи");
+            Console.WriteLine("add \"текст задачи\" - добавить задачу (однострочный режим)");
+            Console.WriteLine("add --multiline (-m) - добавить задачу (многострочный режим)");
+            Console.WriteLine("view [флаги] - показать задачи");
+            Console.WriteLine("  Флаги: --index (-i), --status (-s), --update-date (-d), --all (-a)");
             Console.WriteLine("done <номер> - отметить задачу выполненной");
             Console.WriteLine("delete <номер> - удалить задачу");
             Console.WriteLine("update <номер> \"новый текст\" - изменить задачу");
+            Console.WriteLine("read <номер> - посмотреть полный текст задачи");
             Console.WriteLine("exit - выйти из программы");
         }
 
@@ -106,31 +115,100 @@ namespace Todolist
 
         static void AddTask(string input)
         {
+            // Проверяем флаги
+            if (input.Contains("--multiline") || input.Contains("-m"))
+            {
+                AddMultilineTask();
+            }
+            else
+            {
+                AddSingleLineTask(input);
+            }
+        }
+
+        static void AddSingleLineTask(string input)
+        {
             string[] parts = input.Split('"');
             if (parts.Length >= 2)
             {
                 string task = parts[1];
-                
-                // Проверяем, нужно ли расширять массивы
-                if (taskCount >= todos.Length)
-                {
-                    ResizeArrays();
-                }
-                
-                // Добавляем задачу
-                todos[taskCount] = task;
-                done[taskCount] = false;
-                dates[taskCount] = DateTime.Now;
-                taskCount++;
+                AddTaskToArray(task);
                 Console.WriteLine($"Задача добавлена: {task}");
             }
             else
             {
-                Console.WriteLine("Ошибка: используйте формат add \"текст задачи\"");
+                Console.WriteLine("Ошибка: используйте формат add \"текст задачи\" или add --multiline");
             }
         }
 
-        static void ViewTasks()
+        static void AddMultilineTask()
+        {
+            Console.WriteLine("Многострочный режим. Вводите задачи (для завершения введите 'end'):");
+            
+            List<string> lines = new List<string>();
+            while (true)
+            {
+                string line = Console.ReadLine();
+                if (line?.ToLower() == "end")
+                    break;
+                    
+                if (!string.IsNullOrEmpty(line))
+                    lines.Add(line);
+            }
+            
+            if (lines.Count > 0)
+            {
+                string task = string.Join("\n", lines);
+                AddTaskToArray(task);
+                Console.WriteLine($"Добавлена многострочная задача ({lines.Count} строк)");
+            }
+            else
+            {
+                Console.WriteLine("Не добавлено ни одной строки");
+            }
+        }
+
+        static void AddTaskToArray(string task)
+        {
+            if (taskCount >= todos.Length)
+            {
+                ResizeArrays();
+            }
+            
+            todos[taskCount] = task;
+            done[taskCount] = false;
+            dates[taskCount] = DateTime.Now;
+            taskCount++;
+        }
+
+        static void ViewTasks(string input)
+        {
+            // Парсим флаги
+            bool showIndex = input.Contains("--index") || input.Contains("-i");
+            bool showStatus = input.Contains("--status") || input.Contains("-s");
+            bool showDate = input.Contains("--update-date") || input.Contains("-d");
+            bool showAll = input.Contains("--all") || input.Contains("-a");
+            
+            // Если указан --all, показываем всё
+            if (showAll)
+            {
+                showIndex = true;
+                showStatus = true;
+                showDate = true;
+            }
+            
+            // Если нет флагов, показываем только текст
+            if (!showIndex && !showStatus && !showDate)
+            {
+                ShowSimpleView();
+            }
+            else
+            {
+                ShowTableView(showIndex, showStatus, showDate);
+            }
+        }
+
+        static void ShowSimpleView()
         {
             Console.WriteLine("Список задач:");
             bool hasTasks = false;
@@ -138,9 +216,8 @@ namespace Todolist
             {
                 if (!string.IsNullOrEmpty(todos[i]))
                 {
-                    string status = done[i] ? "✓ ВЫПОЛНЕНО" : "✗ НЕ ВЫПОЛНЕНО";
-                    string date = dates[i].ToString("dd.MM.yyyy HH:mm");
-                    Console.WriteLine($"{i + 1}. {todos[i]} [{status}] - {date}");
+                    string shortText = GetShortText(todos[i]);
+                    Console.WriteLine($"{shortText}");
                     hasTasks = true;
                 }
             }
@@ -151,12 +228,125 @@ namespace Todolist
             }
         }
 
+        static void ShowTableView(bool showIndex, bool showStatus, bool showDate)
+        {
+            if (taskCount == 0)
+            {
+                Console.WriteLine("Задач нет");
+                return;
+            }
+            
+            // Собираем данные для таблицы
+            List<string[]> tableData = new List<string[]>();
+            
+            // Заголовки
+            List<string> headers = new List<string>();
+            if (showIndex) headers.Add("№");
+            headers.Add("Задача");
+            if (showStatus) headers.Add("Статус");
+            if (showDate) headers.Add("Изменено");
+            
+            tableData.Add(headers.ToArray());
+            
+            // Данные
+            for (int i = 0; i < taskCount; i++)
+            {
+                if (string.IsNullOrEmpty(todos[i])) continue;
+                
+                List<string> row = new List<string>();
+                if (showIndex) row.Add((i + 1).ToString());
+                row.Add(GetShortText(todos[i]));
+                if (showStatus) row.Add(done[i] ? "✓ Выполнена" : "✗ Не выполнена");
+                if (showDate) row.Add(dates[i].ToString("dd.MM.yy HH:mm"));
+                
+                tableData.Add(row.ToArray());
+            }
+            
+            // Выводим таблицу
+            PrintTable(tableData);
+        }
+
+        static void PrintTable(List<string[]> tableData)
+        {
+            if (tableData.Count == 0) return;
+            
+            int columns = tableData[0].Length;
+            int[] columnWidths = new int[columns];
+            
+            // Вычисляем ширину колонок
+            foreach (var row in tableData)
+            {
+                for (int i = 0; i < columns; i++)
+                {
+                    if (row[i] != null && row[i].Length > columnWidths[i])
+                    {
+                        columnWidths[i] = row[i].Length;
+                    }
+                }
+            }
+            
+            // Выводим таблицу
+            foreach (var row in tableData)
+            {
+                for (int i = 0; i < columns; i++)
+                {
+                    string cell = row[i] ?? "";
+                    Console.Write(cell.PadRight(columnWidths[i] + 2));
+                }
+                Console.WriteLine();
+                
+                // Разделитель после заголовка
+                if (row == tableData[0])
+                {
+                    for (int i = 0; i < columns; i++)
+                    {
+                        Console.Write(new string('-', columnWidths[i]) + "  ");
+                    }
+                    Console.WriteLine();
+                }
+            }
+        }
+
+        static string GetShortText(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return "";
+            
+            // Берем первую строку для краткого отображения
+            string firstLine = text.Split('\n')[0];
+            if (firstLine.Length <= 30) return firstLine;
+            
+            return firstLine.Substring(0, 27) + "...";
+        }
+
+        static void ReadTask(string input)
+        {
+            if (int.TryParse(input.Substring(5).Trim(), out int index))
+            {
+                int taskIndex = index - 1;
+                if (taskIndex >= 0 && taskIndex < taskCount && !string.IsNullOrEmpty(todos[taskIndex]))
+                {
+                    Console.WriteLine($"=== Задача {index} ===");
+                    Console.WriteLine($"Текст: {todos[taskIndex]}");
+                    Console.WriteLine($"Статус: {(done[taskIndex] ? "✓ ВЫПОЛНЕНА" : "✗ НЕ ВЫПОЛНЕНА")}");
+                    Console.WriteLine($"Изменено: {dates[taskIndex]:dd.MM.yyyy HH:mm}");
+                }
+                else
+                {
+                    Console.WriteLine("Ошибка: неверный номер задачи или задача не существует");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Ошибка: используйте формат read <номер>");
+            }
+        }
+
         static void MarkTaskDone(string input)
         {
             if (int.TryParse(input.Substring(5), out int index))
             {
                 int taskIndex = index - 1;
-                if (taskIndex >= 0 && taskIndex < taskCount)
+                if (taskIndex >= 0 && taskIndex < taskCount && !string.IsNullOrEmpty(todos[taskIndex]))
                 {
                     done[taskIndex] = true;
                     dates[taskIndex] = DateTime.Now;
@@ -178,7 +368,7 @@ namespace Todolist
             if (int.TryParse(input.Substring(7), out int index))
             {
                 int taskIndex = index - 1;
-                if (taskIndex >= 0 && taskIndex < taskCount)
+                if (taskIndex >= 0 && taskIndex < taskCount && !string.IsNullOrEmpty(todos[taskIndex]))
                 {
                     string deletedTask = todos[taskIndex];
                     
@@ -218,7 +408,7 @@ namespace Todolist
                 if (int.TryParse(numberPart, out int index))
                 {
                     int taskIndex = index - 1;
-                    if (taskIndex >= 0 && taskIndex < taskCount)
+                    if (taskIndex >= 0 && taskIndex < taskCount && !string.IsNullOrEmpty(todos[taskIndex]))
                     {
                         string newText = parts[1];
                         string oldText = todos[taskIndex];
