@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Todolist
@@ -63,6 +63,10 @@ namespace Todolist
             {
                 Console.WriteLine("Не добавлено ни одной строки");
             }
+            string dataDir = Path.Combine(Directory.GetCurrentDirectory(), "data");
+            string todoFile = Path.Combine(dataDir, "todo.csv");
+            FileManager.SaveTodos(TodoList, todoFile);
         }
     }
 }
+
