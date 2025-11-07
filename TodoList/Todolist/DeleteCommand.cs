@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace Todolist
 {
@@ -21,6 +21,9 @@ namespace Todolist
             {
                 Console.WriteLine("Ошибка: неверный номер задачи");
             }
+            string dataDir = Path.Combine(Directory.GetCurrentDirectory(), "data");
+            string todoFile = Path.Combine(dataDir, "todo.csv");
+            FileManager.SaveTodos(TodoList, todoFile);
         }
     }
 }
