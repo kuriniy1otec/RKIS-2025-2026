@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Globalization;
 
@@ -62,19 +62,17 @@ namespace Todolist
             {
                 using (StreamWriter writer = new StreamWriter(filePath))
                 {
-                    writer.WriteLine("Index;Text;IsDone;LastUpdate");
+                    writer.WriteLine("Index;Text;Status;LastUpdate");
 
-                    for (int i = 0; i < todos.Count; i++)
+                    int counter = 1;
+                    foreach (var item in todos.GetItems())
                     {
-                        TodoItem item = todos.GetItem(i);
-                        if (item != null)
-                        {
-                            string escapedText = EscapeCsvText(item.Text);
-                            string isDone = item.IsDone.ToString().ToLower();
-                            string date = item.LastUpdate.ToString("yyyy-MM-ddTHH:mm:ss");
+                        string escapedText = EscapeCsvText(item.Text);
+                        string status = item.Status.ToString();
+                        string date = item.LastUpdate.ToString("yyyy-MM-ddTHH:mm:ss");
 
-                            writer.WriteLine($"{i + 1};\"{escapedText}\";{isDone};{date}");
-                        }
+                        writer.WriteLine($"{counter};\"{escapedText}\";{status};{date}");
+                        counter++;
                     }
                 }
                 Console.WriteLine($"Задачи сохранены: {filePath}");
@@ -106,11 +104,11 @@ namespace Todolist
                     if (parts.Length >= 4)
                     {
                         string text = UnescapeCsvText(parts[1]);
-                        bool isDone = bool.Parse(parts[2]);
+                        TodoStatus status = (TodoStatus)Enum.Parse(typeof(TodoStatus), parts[2]);
                         DateTime lastUpdate = DateTime.ParseExact(parts[3], "yyyy-MM-ddTHH:mm:ss", CultureInfo.InvariantCulture);
 
                         TodoItem item = new TodoItem(text);
-                        if (isDone) item.MarkDone();
+                        item.SetStatus(status);
                         SetPrivateField(item, "_lastUpdate", lastUpdate);
 
                         todoList.Add(item);
