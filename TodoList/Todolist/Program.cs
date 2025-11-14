@@ -1,3 +1,6 @@
+using System;
+using System.IO;
+
 namespace Todolist
 {
     class Program
@@ -60,11 +63,6 @@ namespace Todolist
             Console.WriteLine($"Создан новый профиль: {userProfile.GetInfo()}");
         }
 
-        static void InitializeTodoList()
-        {
-            todoList = new TodoList();
-        }
-
         static void RunTodoList()
         {
             while (true)
@@ -80,5 +78,3 @@ namespace Todolist
         }
     }
 }
-
-
