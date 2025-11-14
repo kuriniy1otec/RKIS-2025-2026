@@ -5,44 +5,59 @@ namespace Todolist
 {
     public class TodoList
     {
-        private TodoItem[] items;
-        private int count;
+        private List<TodoItem> items;
 
         public TodoList()
         {
-            items = new TodoItem[2];
-            count = 0;
+            items = new List<TodoItem>();
         }
 
         public void Add(TodoItem item)
         {
-            if (count >= items.Length)
-            {
-                IncreaseArray();
-            }
-
-            items[count] = item;
-            count++;
+            items.Add(item);
         }
 
         public void Delete(int index)
         {
-            if (index >= 0 && index < count)
+            if (index >= 0 && index < items.Count)
             {
-                // Сдвигаем элементы влево
-                for (int i = index; i < count - 1; i++)
-                {
-                    items[i] = items[i + 1];
-                }
-
-                items[count - 1] = null;
-                count--;
+                items.RemoveAt(index);
             }
         }
 
+        public void SetStatus(int index, TodoStatus status)
+        {
+            if (index >= 0 && index < items.Count)
+            {
+                items[index].SetStatus(status);
+            }
+        }
+
+        public TodoItem GetItem(int index)
+        {
+            if (index >= 0 && index < items.Count)
+                return items[index];
+            return null;
+        }
+
+        public TodoItem this[int index]
+        {
+            get => items[index];
+        }
+
+        public IEnumerable<TodoItem> GetItems()
+        {
+            foreach (var item in items)
+            {
+                yield return item;
+            }
+        }
+
+        public int Count => items.Count;
+
         public void View(bool showIndex, bool showStatus, bool showDate)
         {
-            if (count == 0)
+            if (items.Count == 0)
             {
                 Console.WriteLine("Задач нет");
                 return;
@@ -50,7 +65,6 @@ namespace Todolist
 
             var tableData = new List<string[]>();
 
-            // Заголовки
             var headers = new List<string>();
             if (showIndex) headers.Add("№");
             headers.Add("Задача");
@@ -59,54 +73,46 @@ namespace Todolist
 
             tableData.Add(headers.ToArray());
 
-            // Данные
-            for (int i = 0; i < count; i++)
+            int counter = 1;
+            foreach (var item in items)
             {
                 var row = new List<string>();
-                if (showIndex) row.Add((i + 1).ToString());
+                if (showIndex) row.Add(counter.ToString());
 
-                string shortText = items[i].Text.Length > 30 ?
-                    items[i].Text.Substring(0, 27) + "..." : items[i].Text;
+                string shortText = item.Text.Length > 30 ?
+                    item.Text.Substring(0, 27) + "..." : item.Text;
                 row.Add(shortText);
 
-                if (showStatus) row.Add(items[i].IsDone ? "V Выполнена" : "X Не выполнена");
-                if (showDate) row.Add(items[i].LastUpdate.ToString("dd.MM.yy HH:mm"));
+                if (showStatus) row.Add(GetStatusText(item.Status));
+                if (showDate) row.Add(item.LastUpdate.ToString("dd.MM.yy HH:mm"));
 
                 tableData.Add(row.ToArray());
+                counter++;
             }
 
             PrintTable(tableData);
         }
 
-        public TodoItem GetItem(int index)
+        private string GetStatusText(TodoStatus status)
         {
-            if (index >= 0 && index < count)
-                return items[index];
-            return null;
-        }
-
-        public int Count => count;
-
-        private void IncreaseArray()
-        {
-            int newSize = items.Length * 2;
-            var newItems = new TodoItem[newSize];
-
-            for (int i = 0; i < items.Length; i++)
+            return status switch
             {
-                newItems[i] = items[i];
-            }
-
-            items = newItems;
-            Console.WriteLine($"Массив расширен до {newSize} элементов");
+                TodoStatus.NotStarted => "Не начато",
+                TodoStatus.InProgress => "В процессе",
+                TodoStatus.Completed => "Выполнено",
+                TodoStatus.Postponed => "Отложено",
+                TodoStatus.Failed => "Провалено",
+                _ => "Неизвестно"
+            };
         }
 
         private void PrintTable(List<string[]> tableData)
         {
+            if (tableData.Count == 0) return;
+
             int columns = tableData[0].Length;
             int[] columnWidths = new int[columns];
 
-            // Вычисляем ширину колонок
             foreach (var row in tableData)
             {
                 for (int i = 0; i < columns; i++)
@@ -118,7 +124,6 @@ namespace Todolist
                 }
             }
 
-            // Выводим таблицу
             foreach (var row in tableData)
             {
                 for (int i = 0; i < columns; i++)
@@ -127,7 +132,6 @@ namespace Todolist
                 }
                 Console.WriteLine();
 
-                // Разделитель после заголовка
                 if (row == tableData[0])
                 {
                     for (int i = 0; i < columns; i++)
