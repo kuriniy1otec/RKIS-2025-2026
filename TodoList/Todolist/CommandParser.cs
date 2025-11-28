@@ -15,47 +15,51 @@ namespace Todolist
                 return new HelpCommand();
 
             if (lowerInput == "profile")
-                return new ProfileCommand { Profile = profile };
+                return new ProfileCommand();
 
             if (lowerInput == "exit")
                 return new ExitCommand();
 
+            if (lowerInput == "undo")
+                return new UndoCommand();
+
+            if (lowerInput == "redo")
+                return new RedoCommand();
+
             if (lowerInput.StartsWith("add"))
-                return ParseAddCommand(input, todoList);
+                return ParseAddCommand(input);
 
             if (lowerInput.StartsWith("view"))
-                return ParseViewCommand(input, todoList);
+                return ParseViewCommand(input);
 
             if (lowerInput.StartsWith("status "))
-                return ParseStatusCommand(input, todoList);
+                return ParseStatusCommand(input);
 
             if (lowerInput.StartsWith("delete "))
-                return ParseDeleteCommand(input, todoList);
+                return ParseDeleteCommand(input);
 
             if (lowerInput.StartsWith("update "))
-                return ParseUpdateCommand(input, todoList);
+                return ParseUpdateCommand(input);
 
             if (lowerInput.StartsWith("read "))
-                return ParseReadCommand(input, todoList);
+                return ParseReadCommand(input);
 
             return new UnknownCommand();
         }
 
-        private static ICommand ParseAddCommand(string input, TodoList todoList)
+        private static ICommand ParseAddCommand(string input)
         {
             return new AddCommand
             {
-                TodoList = todoList,
                 Input = input,
                 IsMultiline = ContainsFlag(input, "--multiline", "-m")
             };
         }
 
-        private static ICommand ParseViewCommand(string input, TodoList todoList)
+        private static ICommand ParseViewCommand(string input)
         {
             return new ViewCommand
             {
-                TodoList = todoList,
                 Input = input,
                 ShowIndex = ContainsFlag(input, "--index", "-i"),
                 ShowStatus = ContainsFlag(input, "--status", "-s"),
@@ -64,7 +68,7 @@ namespace Todolist
             };
         }
 
-        private static ICommand ParseStatusCommand(string input, TodoList todoList)
+        private static ICommand ParseStatusCommand(string input)
         {
             string[] parts = input.Split(' ');
             if (parts.Length >= 3)
@@ -76,7 +80,6 @@ namespace Todolist
                     {
                         return new StatusCommand
                         {
-                            TodoList = todoList,
                             Index = index,
                             Status = status
                         };
@@ -85,6 +88,51 @@ namespace Todolist
             }
 
             return new UnknownCommand("Ошибка: используйте формат status <номер> <статус>");
+        }
+
+        private static ICommand ParseDeleteCommand(string input)
+        {
+            if (int.TryParse(input.Substring(7).Trim(), out int index))
+            {
+                return new DeleteCommand
+                {
+                    Index = index
+                };
+            }
+
+            return new UnknownCommand("Ошибка: используйте формат delete <номер>");
+        }
+
+        private static ICommand ParseUpdateCommand(string input)
+        {
+            string[] parts = input.Split('"');
+            if (parts.Length >= 2)
+            {
+                string numberPart = parts[0].Substring(7).Trim();
+                if (int.TryParse(numberPart, out int index))
+                {
+                    return new UpdateCommand
+                    {
+                        Index = index,
+                        NewText = parts[1]
+                    };
+                }
+            }
+
+            return new UnknownCommand("Ошибка: используйте формат update <номер> \"новый текст\"");
+        }
+
+        private static ICommand ParseReadCommand(string input)
+        {
+            if (int.TryParse(input.Substring(5).Trim(), out int index))
+            {
+                return new ReadCommand
+                {
+                    Index = index
+                };
+            }
+
+            return new UnknownCommand("Ошибка: используйте формат read <номер>");
         }
 
         private static TodoStatus ParseStatus(string statusText)
@@ -98,54 +146,6 @@ namespace Todolist
                 "failed" or "fail" => TodoStatus.Failed,
                 _ => (TodoStatus)(-1)
             };
-        }
-
-        private static ICommand ParseDeleteCommand(string input, TodoList todoList)
-        {
-            if (int.TryParse(input.Substring(7).Trim(), out int index))
-            {
-                return new DeleteCommand
-                {
-                    TodoList = todoList,
-                    Index = index
-                };
-            }
-
-            return new UnknownCommand("Ошибка: используйте формат delete <номер>");
-        }
-
-        private static ICommand ParseUpdateCommand(string input, TodoList todoList)
-        {
-            string[] parts = input.Split('"');
-            if (parts.Length >= 2)
-            {
-                string numberPart = parts[0].Substring(7).Trim();
-                if (int.TryParse(numberPart, out int index))
-                {
-                    return new UpdateCommand
-                    {
-                        TodoList = todoList,
-                        Index = index,
-                        NewText = parts[1]
-                    };
-                }
-            }
-
-            return new UnknownCommand("Ошибка: используйте формат update <номер> \"новый текст\"");
-        }
-
-        private static ICommand ParseReadCommand(string input, TodoList todoList)
-        {
-            if (int.TryParse(input.Substring(5).Trim(), out int index))
-            {
-                return new ReadCommand
-                {
-                    TodoList = todoList,
-                    Index = index
-                };
-            }
-
-            return new UnknownCommand("Ошибка: используйте формат read <номер>");
         }
 
         private static bool ContainsFlag(string input, string longFlag, string shortFlag)
@@ -188,6 +188,10 @@ namespace Todolist
         public void Execute()
         {
             Console.WriteLine(_message);
+        }
+
+        public void Unexecute()
+        {
         }
     }
 }
