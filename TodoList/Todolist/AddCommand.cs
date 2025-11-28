@@ -5,9 +5,10 @@ namespace Todolist
 {
     public class AddCommand : ICommand
     {
-        public TodoList TodoList { get; set; }
         public string Input { get; set; }
         public bool IsMultiline { get; set; }
+        private TodoItem _addedItem;
+        private int _addedIndex;
 
         public void Execute()
         {
@@ -19,6 +20,22 @@ namespace Todolist
             {
                 AddSingleLineTask();
             }
+
+            string dataDir = System.IO.Path.Combine(Directory.GetCurrentDirectory(), "data");
+            string todoFile = System.IO.Path.Combine(dataDir, "todo.csv");
+            FileManager.SaveTodos(AppInfo.Todos, todoFile);
+        }
+
+        public void Unexecute()
+        {
+            if (_addedItem != null && _addedIndex >= 0 && _addedIndex < AppInfo.Todos.Count)
+            {
+                if (AppInfo.Todos.GetItem(_addedIndex) == _addedItem)
+                {
+                    AppInfo.Todos.Delete(_addedIndex);
+                    Console.WriteLine($"Отменено добавление: {_addedItem.Text}");
+                }
+            }
         }
 
         private void AddSingleLineTask()
@@ -28,7 +45,9 @@ namespace Todolist
             {
                 string task = parts[1];
                 TodoItem newItem = new TodoItem(task);
-                TodoList.Add(newItem);
+                _addedIndex = AppInfo.Todos.Count;
+                AppInfo.Todos.Add(newItem);
+                _addedItem = newItem;
                 Console.WriteLine($"Задача добавлена: {task}");
             }
             else
@@ -56,17 +75,15 @@ namespace Todolist
             {
                 string task = string.Join("\n", lines);
                 TodoItem newItem = new TodoItem(task);
-                TodoList.Add(newItem);
+                _addedIndex = AppInfo.Todos.Count;
+                AppInfo.Todos.Add(newItem);
+                _addedItem = newItem;
                 Console.WriteLine($"Добавлена многострочная задача ({lines.Count} строк)");
             }
             else
             {
                 Console.WriteLine("Не добавлено ни одной строки");
             }
-            string dataDir = Path.Combine(Directory.GetCurrentDirectory(), "data");
-            string todoFile = Path.Combine(dataDir, "todo.csv");
-            FileManager.SaveTodos(TodoList, todoFile);
         }
     }
 }
-
