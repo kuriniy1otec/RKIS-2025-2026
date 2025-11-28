@@ -5,8 +5,6 @@ namespace Todolist
 {
     class Program
     {
-        private static TodoList todoList;
-        private static Profile userProfile;
         private static string dataDirectory;
         private static string profileFilePath;
         private static string todoFilePath;
@@ -32,17 +30,17 @@ namespace Todolist
 
             FileManager.EnsureDataDirectory(dataDirectory);
 
-            userProfile = FileManager.LoadProfile(profileFilePath);
-            if (userProfile == null)
+            AppInfo.CurrentProfile = FileManager.LoadProfile(profileFilePath);
+            if (AppInfo.CurrentProfile == null)
             {
                 CreateNewProfile();
             }
             else
             {
-                Console.WriteLine($"Загружен профиль: {userProfile.GetInfo()}");
+                Console.WriteLine($"Загружен профиль: {AppInfo.CurrentProfile.GetInfo()}");
             }
 
-            todoList = FileManager.LoadTodos(todoFilePath);
+            AppInfo.Todos = FileManager.LoadTodos(todoFilePath);
 
             Console.WriteLine();
         }
@@ -58,9 +56,9 @@ namespace Todolist
             Console.Write("Введите год рождения: ");
             int birthYear = int.Parse(Console.ReadLine());
 
-            userProfile = new Profile(firstName, lastName, birthYear);
-            FileManager.SaveProfile(userProfile, profileFilePath);
-            Console.WriteLine($"Создан новый профиль: {userProfile.GetInfo()}");
+            AppInfo.CurrentProfile = new Profile(firstName, lastName, birthYear);
+            FileManager.SaveProfile(AppInfo.CurrentProfile, profileFilePath);
+            Console.WriteLine($"Создан новый профиль: {AppInfo.CurrentProfile.GetInfo()}");
         }
 
         static void RunTodoList()
@@ -70,7 +68,15 @@ namespace Todolist
                 Console.Write("Введите команду (help - список команд): ");
                 string input = Console.ReadLine();
 
-                ICommand command = CommandParser.Parse(input, todoList, userProfile);
+                ICommand command = CommandParser.Parse(input, AppInfo.Todos, AppInfo.CurrentProfile);
+
+                if (command is AddCommand || command is DeleteCommand ||
+                    command is UpdateCommand || command is StatusCommand)
+                {
+                    AppInfo.UndoStack.Push(command);
+                    AppInfo.RedoStack.Clear();
+                }
+
                 command.Execute();
 
                 Console.WriteLine();
