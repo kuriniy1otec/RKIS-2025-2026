@@ -1,19 +1,21 @@
-﻿namespace Todolist
+using System;
+using System.IO;
+
+namespace Todolist
 {
     public class ProfileCommand : ICommand
     {
-        public Profile Profile { get; set; }
-        public string DataDirectory { get; set; }
-
         public void Execute()
         {
-            Console.WriteLine(Profile.GetInfo());
+            Console.WriteLine(AppInfo.CurrentProfile.GetInfo());
 
-            if (!string.IsNullOrEmpty(DataDirectory))
-            {
-                string profileFile = Path.Combine(DataDirectory, "profile.txt");
-                FileManager.SaveProfile(Profile, profileFile);
-            }
+            string dataDir = Path.Combine(Directory.GetCurrentDirectory(), "data");
+            string profileFile = Path.Combine(dataDir, "profile.txt");
+            FileManager.SaveProfile(AppInfo.CurrentProfile, profileFile);
+        }
+
+        public void Unexecute()
+        {
         }
     }
 }
