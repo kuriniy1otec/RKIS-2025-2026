@@ -1,8 +1,7 @@
-﻿namespace Todolist
+namespace Todolist
 {
     public class ViewCommand : ICommand
     {
-        public TodoList TodoList { get; set; }
         public string Input { get; set; }
         public bool ShowIndex { get; set; }
         public bool ShowStatus { get; set; }
@@ -18,7 +17,11 @@
                 ShowDate = true;
             }
 
-            TodoList.View(ShowIndex, ShowStatus, ShowDate);
+            AppInfo.Todos.View(ShowIndex, ShowStatus, ShowDate);
+        }
+
+        public void Unexecute()
+        {
         }
     }
 }
