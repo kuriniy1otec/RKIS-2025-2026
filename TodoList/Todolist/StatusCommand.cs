@@ -1,29 +1,41 @@
-﻿using System;
+using System;
 
 namespace Todolist
 {
     public class StatusCommand : ICommand
     {
-        public TodoList TodoList { get; set; }
         public int Index { get; set; }
         public TodoStatus Status { get; set; }
+        private TodoStatus _oldStatus;
+        private int _taskIndex;
 
         public void Execute()
         {
-            int taskIndex = Index - 1;
-            TodoItem item = TodoList.GetItem(taskIndex);
+            _taskIndex = Index - 1;
+            TodoItem item = AppInfo.Todos.GetItem(_taskIndex);
             if (item != null)
             {
+                _oldStatus = item.Status;
                 item.SetStatus(Status);
                 Console.WriteLine($"Задача {Index} установлена в статус: {GetStatusText(Status)}");
 
-                string dataDir = Path.Combine(Directory.GetCurrentDirectory(), "data");
-                string todoFile = Path.Combine(dataDir, "todo.csv");
-                FileManager.SaveTodos(TodoList, todoFile);
+                string dataDir = System.IO.Path.Combine(Directory.GetCurrentDirectory(), "data");
+                string todoFile = System.IO.Path.Combine(dataDir, "todo.csv");
+                FileManager.SaveTodos(AppInfo.Todos, todoFile);
             }
             else
             {
                 Console.WriteLine("Ошибка: неверный номер задачи");
+            }
+        }
+
+        public void Unexecute()
+        {
+            TodoItem item = AppInfo.Todos.GetItem(_taskIndex);
+            if (item != null)
+            {
+                item.SetStatus(_oldStatus);
+                Console.WriteLine($"Отменено изменение статуса: {GetStatusText(Status)} -> {GetStatusText(_oldStatus)}");
             }
         }
 
