@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace Todolist
 {
@@ -8,6 +8,10 @@ namespace Todolist
         {
             Console.WriteLine("Выход из программы...");
             Environment.Exit(0);
+        }
+
+        public void Unexecute()
+        {
         }
     }
 }
